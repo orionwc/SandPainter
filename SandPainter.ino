@@ -24,7 +24,7 @@ INCLUDED LIBRARIES
 #define USE_LED_CIRCLE true //Circular LED display - Set this to true if you have connected a circular LED display under the sand.
 //You will also need to set the constants in the LED CIRCLE block about 250 lines below.
 
-// LED Paint format (LEDpos: types + RGB). Set false for minimal builds (Positions-only patterns, no extra flash). Colors are shown only with USE_LED_CIRCLE.
+// SandPainter format (LEDpos: types + RGB). Set false for minimal builds (Positions-only patterns, no extra flash). Colors are shown only with USE_LED_CIRCLE.
 #define ENABLE_COLORED_PATTERN_SUPPORT true
 
 // LED pattern point type delays
@@ -80,7 +80,7 @@ Pattern numbering order:
 
 To add your own pattern:
 1. Find an empty pattern slot (PATTERN_A through PATTERN_J)
-2. Paste your coordinates from the Image2Sand tool into that pattern's data block below
+2. Paste your coordinates from the SandPainter web editor into that pattern's data block below
 3. Uncomment the #define for that pattern
 4. Compile and upload
 5. Your pattern will appear as a numbered pattern in the selection menu
@@ -122,7 +122,7 @@ struct LEDpos {
   PatternColor color;                   // RGB color values (0-255)
 };
 
-//=== CUSTOM PATTERN DATA - Paste your coordinates from Image2Sand tool below ===
+//=== CUSTOM PATTERN DATA - Paste your coordinates from the SandPainter web editor below ===
 // More patterns available at https://github.com/orionwc/Image2Sand/blob/main/CommunityPatterns.txt
 
 #ifdef ENABLE_CUSTOM_PATTERN_A
