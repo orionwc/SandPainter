@@ -159,19 +159,6 @@ Where:
 
 ---
 
-## SandPainter Naming Suggestions
-
-These files still contain some "LED Paint" and "Image2Sand" naming that you may want to align:
-
-- In `index.html`:
-  - Change page title from `LED Paint — Sand Garden Pattern Editor` to `SandPainter — Sand Garden Pattern Editor`.
-  - Change main heading from `LED Paint — Sand Garden Pattern Editor` to `SandPainter — Sand Garden Pattern Editor`.
-- In `SandPainter.ino` comments:
-  - Update references like "LED Paint format" to "SandPainter format".
-  - Update "generated using Image2Sand tool" comments to mention SandPainter workflow (or "Image2Sand/SandPainter tools" if you want both).
-
----
-
 ## Credit
 
 SandPainter builds on the Sand Garden image workflow concept originally published in [Image2Sand](https://github.com/orionwc/Image2Sand/).
