@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LED Paint — Sand Garden Pattern Editor</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    h1 { margin: 0 0 16px 0; font-size: 1.5rem; font-weight: 600; }
+    .layout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .panel {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #a0a0c0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    #canvasWrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+    #canvas {
+      display: block;
+      background: #0f0f1a;
+      border-radius: 8px;
+      cursor: crosshair;
+    }
+    #marble {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fff, #888);
+      box-shadow: 0 0 8px rgba(255,255,255,0.6);
+      pointer-events: none;
+      display: none;
+    }
+    .controls label { display: block; margin-bottom: 6px; font-size: 0.9rem; }
+    .controls .row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    input[type="color"] { width: 44px; height: 28px; padding: 2px; cursor: pointer; border: none; border-radius: 4px; }
+    input[type="number"] { width: 52px; padding: 6px 8px; font-size: 0.9rem; border: 1px solid #2a2a4a; border-radius: 6px; background: #0f0f1a; color: #eee; }
+    .rgb span { margin: 0 4px; font-size: 0.85rem; color: #888; }
+    .typeRadios { display: flex; gap: 12px; margin-bottom: 12px; }
+    .typeRadios label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem; }
+    .typeRadios input { margin: 0; }
+    #output {
+      width: 100%;
+      min-width: 320px;
+      min-height: 140px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 12px;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      background: #0f0f1a;
+      color: #b8e0d2;
+      resize: vertical;
+    }
+    .btn {
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.15s, transform 0.05s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: #4361ee; color: #fff; }
+    .btn-primary:hover { background: #5a75f0; }
+    .btn-fill { background: #2ec4b6; color: #0f0f1a; margin-top: 8px; }
+    .btn-fill:hover { background: #44d1c5; }
+    .btn-outline { background: transparent; color: #a0a0c0; border: 1px solid #3a3a5a; }
+    .btn-outline:hover { background: #2a2a4a; }
+    .output-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .selection-mode { font-size: 0.85rem; color: #888; margin-top: 6px; }
+    #rainbowToast {
+      position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      z-index: 1000; padding: 24px 48px; border-radius: 16px;
+      background: rgba(15, 15, 26, 0.95); border: 4px solid transparent;
+      font-size: 1.8rem; font-weight: 800; letter-spacing: 0.1em;
+      box-shadow: 0 0 40px rgba(255,255,255,0.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    #rainbowToast.show { opacity: 1; }
+    #rainbowToast .text {
+      background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+      background-size: 400% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbowText 1.5s linear infinite;
+    }
+    @keyframes rainbowText { 0% { background-position: 0% 50%; } 100% { background-position: 400% 50%; } }
+    #rainbowFlash {
+      position: fixed; inset: 0; z-index: 999; pointer-events: none;
+      opacity: 0; background: #f00; display: none;
+    }
+    #colorSelectorWrap {
+      padding: 12px; margin: -12px -12px 12px -12px; border-radius: 10px;
+      transition: background 0.3s ease;
+    }
+    #colorSelectorWrap.rainbow-bg {
+      background: linear-gradient(120deg, #f00 0%, #ff0 16%, #0f0 33%, #0ff 50%, #00f 66%, #f0f 83%, #f00 100%);
+      background-size: 300% 300%;
+      animation: rainbowBg 4s ease infinite;
+    }
+    @keyframes rainbowBg { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    #dupClickOverlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1001;
+      display: none; align-items: center; justify-content: center;
+    }
+    #dupClickOverlay.show { display: flex; }
+    #dupClickDialog {
+      background: #16213e; border-radius: 12px; padding: 20px; max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      border: 1px solid #2a2a4a;
+    }
+    #dupClickDialog p { margin: 0 0 16px 0; font-size: 0.95rem; color: #ddd; line-height: 1.4; }
+    #dupClickDialog .dup-buttons { display: flex; gap: 10px; margin-bottom: 12px; }
+    #dupClickDialog .dup-buttons .btn { flex: 1; }
+    #dupClickDialog label.dup-dismiss { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #a0a0c0; cursor: pointer; }
+    #dupClickDialog label.dup-dismiss input { margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="rainbowFlash"></div>
+  <div id="rainbowToast"><span class="text">RAINBOW MODE ACTIVATED</span></div>
+  <div id="dupClickOverlay">
+    <div id="dupClickDialog">
+      <p id="dupClickMessage">You clicked the same LED twice. This may be a mistake. Are you sure you want to add it again?</p>
+      <div class="dup-buttons">
+        <button type="button" class="btn btn-primary" id="dupClickContinue">Continue</button>
+        <button type="button" class="btn btn-outline" id="dupClickUndo">Cancel</button>
+      </div>
+      <label class="dup-dismiss"><input type="checkbox" id="dupClickDismiss"> Don't show this again</label>
+    </div>
+  </div>
+  <h1>LED Paint — Sand Garden Pattern Editor</h1>
+  <div class="layout">
+    <div class="panel" id="canvasWrap">
+      <canvas id="canvas" width="520" height="520"></canvas>
+      <div id="marble"></div>
+    </div>
+    <div class="panel controls" style="min-width: 260px;">
+      <div id="colorSelectorWrap">
+      <h2>Color (RGB)</h2>
+      <div class="row rgb">
+        <input type="color" id="colorPicker" value="#ff0000">
+        <span>R</span><input type="number" id="inpR" min="0" max="255" value="255">
+        <span>G</span><input type="number" id="inpG" min="0" max="255" value="0">
+        <span>B</span><input type="number" id="inpB" min="0" max="255" value="0">
+      </div>
+      </div>
+      <h2>Point type</h2>
+      <div class="typeRadios">
+        <label><input type="radio" name="pointType" value="0" checked> Draw</label>
+        <label><input type="radio" name="pointType" value="1"> Fill</label>
+        <label><input type="radio" name="pointType" value="2"> Detail</label>
+      </div>
+      <div id="drawOnly" style="display: block; margin-top: 6px;">
+        <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-size:0.8rem;color:#a0a0c0;" title="Output a point for every LED the marble moves over in Draw">
+          <input type="checkbox" id="chkPointPerLed"> Point per LED
+        </label>
+      </div>
+      <div id="fillOnly" style="display: none;">
+        <div style="margin-bottom:8px;">
+          <span style="font-size:0.85rem;color:#888;">Selection method</span>
+          <div class="typeRadios" style="margin-top:4px;">
+            <label><input type="radio" name="fillSelectMethod" value="select" checked> Select</label>
+            <label><input type="radio" name="fillSelectMethod" value="flood"> Flood</label>
+            <label><input type="radio" name="fillSelectMethod" value="rect"> Rect</label>
+          </div>
+        </div>
+        <div style="margin-bottom:8px;">
+          <span style="font-size:0.85rem;color:#888;">Action</span>
+          <div class="typeRadios" style="margin-top:4px;">
+            <label><input type="radio" name="fillSelectAction" value="select" checked> Select</label>
+            <label><input type="radio" name="fillSelectAction" value="deselect"> Deselect</label>
+          </div>
+        </div>
+        <button type="button" class="btn btn-fill" id="btnFill">Fill</button>
+        <div class="selection-mode" id="selectionMode">Click or drag to select; use Fill to apply</div>
+      </div>
+      <h2>Output</h2>
+      <textarea id="output" placeholder="Points appear here as you draw..."></textarea>
+      <div class="output-actions">
+        <button type="button" class="btn btn-primary" id="btnCopy">Copy</button>
+        <button type="button" class="btn btn-outline" id="btnSimulate">Simulate</button>
+        <button type="button" class="btn btn-outline" id="btnUndo" title="Undo last edit (Ctrl+Z)">Undo</button>
+        <button type="button" class="btn btn-outline" id="btnClear" title="Reset everything">Clear pattern</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    // --- Constants (match firmware) ---
+    const LED_PER_CIRCLE = [60, 48, 40, 32, 24, 16, 12, 8, 1]; // outer to inner
+    const NUM_RINGS = 9;
+    const TOTAL_LEDS = LED_PER_CIRCLE.reduce((a, b) => a + b, 0); // 241
+    const CENTER_LED_INDEX = TOTAL_LEDS - 1; // center ring has 1 LED at end of array
+    const R_MAX = 1000;
+    const THETA_MAX = 3600; // degrees * 10
+    // Invert theta for sand garden hardware: 0 <-> 3600 (site uses 0=right anticlockwise; hardware expects opposite)
+    function thetaToOutput(theta) { const v = (THETA_MAX - theta) % THETA_MAX; return v; } // 0..3590, never 3600
+    function thetaFromOutput(theta) { return theta === 0 ? 0 : THETA_MAX - theta; }
+    const FILL_DELAY_MS = 10;
+    const DETAIL_DELAY_MS = 200;
+    const MARBLE_MS_PER_LED = 80;
+
+    // Equal spacing: each ring same distance from the last. Ring 0 = outermost, ring 8 = center.
+    const R_BY_RING = [];
+    for (let ring = 0; ring < NUM_RINGS; ring++) {
+      R_BY_RING.push(ring === NUM_RINGS - 1 ? 0 : Math.round((NUM_RINGS - 1 - ring) * (R_MAX / (NUM_RINGS - 1))));
+    }
+
+    // --- LED index <-> (r, theta) for new layout (equal spacing, 4 on axes) ---
+    function getLedNumber(r, theta) {
+      let ring = 0;
+      let bestDr = Infinity;
+      for (let ri = 0; ri < NUM_RINGS; ri++) {
+        const dr = Math.abs(R_BY_RING[ri] - r);
+        if (dr < bestDr) { bestDr = dr; ring = ri; }
+      }
+      let start = 0;
+      for (let i = 0; i < ring; i++) start += LED_PER_CIRCLE[i];
+      const n = LED_PER_CIRCLE[ring];
+      const angles = anglesForRing(n);
+      let t = ((theta % THETA_MAX) + THETA_MAX) % THETA_MAX;
+      let bestPos = 0;
+      let bestDt = Infinity;
+      for (let p = 0; p < angles.length; p++) {
+        let dt = Math.abs(angles[p] - t);
+        if (dt > THETA_MAX / 2) dt = THETA_MAX - dt;
+        if (dt < bestDt) { bestDt = dt; bestPos = p; }
+      }
+      return start + bestPos;
+    }
+
+    function ledToRTheta(index) {
+      let start = 0;
+      let ring = 0;
+      for (let i = 0; i < NUM_RINGS; i++) {
+        if (index < start + LED_PER_CIRCLE[i]) {
+          ring = i;
+          break;
+        }
+        start += LED_PER_CIRCLE[i];
+      }
+      const posInRing = index - start;
+      const n = LED_PER_CIRCLE[ring];
+      const r = R_BY_RING[ring];
+      const theta = Math.round(((n - 1 - posInRing + 0.5) / n) * THETA_MAX) % THETA_MAX;
+      return { r, theta };
+    }
+
+    // --- Build LED list: 4 on X/Y axes, (n-4)/4 evenly between each. Equal ring spacing. ---
+    const CANVAS_SIZE = 520;
+    const CENTER = CANVAS_SIZE / 2;
+    const RADIUS_MAX = (CENTER - 24);
+    const RING_STEP = RADIUS_MAX / (NUM_RINGS - 1); // equal distance between rings
+    const LED_RADIUS = 5; // pixel radius of each LED circle on canvas
+
+    function anglesForRing(n) {
+      if (n === 1) return [0]; // center dot
+      const k = (n - 4) / 4; // LEDs between each axis pair
+      const d = 900 / (k + 1); // degrees*10 step within each quadrant
+      const angles = [];
+      for (let seg = 0; seg < 4; seg++) {
+        const base = seg * 900; // 0, 900, 1800, 2700 (right, top, left, bottom)
+        for (let j = 0; j <= k; j++) {
+          let theta = Math.round(base + j * d);
+          theta = ((theta % THETA_MAX) + THETA_MAX) % THETA_MAX;
+          angles.push(theta);
+        }
+      }
+      return angles;
+    }
+
+    const leds = [];
+    let idx = 0;
+    for (let ring = 0; ring < NUM_RINGS; ring++) {
+      const n = LED_PER_CIRCLE[ring];
+      const r = R_BY_RING[ring];
+      const radiusPx = (NUM_RINGS - 1 - ring) * RING_STEP; // ring 0 = max radius, ring 8 = 0
+      const angles = anglesForRing(n);
+      for (let i = 0; i < n; i++) {
+        const thetaDeg10 = angles[i];
+        const angleRad = (thetaDeg10 / 10) * (Math.PI / 180); // theta 0/3600 = right, 2700 = up, clockwise
+        leds.push({
+          index: idx,
+          ring,
+          r, theta: thetaDeg10,
+          x: CENTER + radiusPx * Math.cos(angleRad),
+          y: CENTER + radiusPx * Math.sin(angleRad)
+        });
+        idx++;
+      }
+    }
+
+    // --- Canvas ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const marbleEl = document.getElementById('marble');
+
+    const ledColors = new Array(TOTAL_LEDS).fill(null).map(() => ({ r: 0, g: 0, b: 0 }));
+    let lastDrawLedIndex = null;
+    let prevDrawLedIndex = null;
+    let drawPath = []; // full sequence of Draw points (for showing all arrows)
+    let selectedLeds = new Set();
+    let fillToolActive = false;
+    let rectStart = null;
+    let isDragging = false;
+    let rectCurrent = null;
+    let lastDetailLedIndex = null;
+    const undoHistory = [];
+    const redoHistory = [];
+    let rainbowMode = false;
+    let rainbowHueCounter = 0;
+    const KONAMI = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
+    let konamiIndex = 0;
+    let isSimulating = false;
+    let stopSimulationRequested = false;
+    let suppressDuplicateWarning = false;
+    let pendingDuplicateDrawIdx = null;
+
+    function doDrawSegment(idx) {
+      pushUndo();
+      const { r: rVal, theta: thetaVal } = leds[idx];
+      const fromIdx = lastDrawLedIndex !== null ? lastDrawLedIndex : CENTER_LED_INDEX;
+      const along = ledsAlongLine(fromIdx, idx);
+      const includeCenterStart = (fromIdx === CENTER_LED_INDEX && drawPath.length === 0);
+      let toColor = includeCenterStart ? along : along.filter(ledIdx => ledIdx !== fromIdx);
+      if (!toColor.includes(idx)) toColor = [...toColor, idx];
+      const pointPerLed = document.getElementById('chkPointPerLed').checked;
+      let rgb;
+      if (rainbowMode && along.length > 0) {
+        const n = along.length;
+        const includeStart = fromIdx === CENTER_LED_INDEX;
+        if (pointPerLed) {
+          toColor.forEach((ledIdx, j) => {
+            const segmentIndex = includeStart ? j : j + 1;
+            const hue = (n > 1 ? (segmentIndex / (n - 1)) * 360 : 0);
+            rgb = hsvToRgb(hue, 1, 1);
+            ledColors[ledIdx] = { ...rgb };
+            appendPoint(0, leds[ledIdx].r, leds[ledIdx].theta, rgb);
+          });
+        } else {
+          rgb = getRainbowRGBAndAdvance();
+          toColor.forEach(ledIdx => { ledColors[ledIdx] = { ...rgb }; });
+          appendPoint(0, rVal, thetaVal, rgb);
+        }
+      } else {
+        rgb = getEffectiveRGB();
+        toColor.forEach(i => {
+          ledColors[i] = { ...rgb };
+          if (pointPerLed) appendPoint(0, leds[i].r, leds[i].theta, rgb);
+        });
+        if (!pointPerLed) appendPoint(0, rVal, thetaVal, rgb);
+      }
+      prevDrawLedIndex = lastDrawLedIndex;
+      lastDrawLedIndex = idx;
+      if (pointPerLed) toColor.forEach(ledIdx => drawPath.push(ledIdx));
+      else drawPath.push(idx);
+    }
+
+    function turnOffRainbowMode() {
+      rainbowMode = false;
+      rainbowHueCounter = 0;
+      document.getElementById('colorSelectorWrap').classList.remove('rainbow-bg');
+    }
+
+    function saveState() {
+      return {
+        ledColors: ledColors.map(c => c ? { ...c } : null),
+        drawPath: drawPath.slice(),
+        lastDrawLedIndex,
+        prevDrawLedIndex,
+        selectedLeds: Array.from(selectedLeds),
+        output: document.getElementById('output').value,
+        rainbowHueCounter
+      };
+    }
+    function restoreState(s) {
+      s.ledColors.forEach((c, i) => { ledColors[i] = c ? { ...c } : null; });
+      drawPath.length = 0;
+      drawPath.push(...s.drawPath);
+      lastDrawLedIndex = s.lastDrawLedIndex;
+      prevDrawLedIndex = s.prevDrawLedIndex;
+      selectedLeds.clear();
+      s.selectedLeds.forEach(i => selectedLeds.add(i));
+      document.getElementById('output').value = (s.output || '').trim().replace(/,\s*$/, '');
+      rainbowHueCounter = s.rainbowHueCounter || 0;
+    }
+    function pushUndo() {
+      undoHistory.push(saveState());
+      redoHistory.length = 0;
+    }
+    function clearPattern() {
+      ledColors.forEach((_, i) => { ledColors[i] = { r: 0, g: 0, b: 0 }; });
+      drawPath.length = 0;
+      lastDrawLedIndex = null;
+      prevDrawLedIndex = null;
+      selectedLeds.clear();
+      rectStart = null;
+      rectCurrent = null;
+      document.getElementById('output').value = '';
+      undoHistory.length = 0;
+      redoHistory.length = 0;
+      rainbowHueCounter = 0;
+      draw();
+    }
+    function undo() {
+      if (undoHistory.length === 0) return;
+      redoHistory.push(saveState());
+      restoreState(undoHistory.pop());
+      draw();
+    }
+    function redo() {
+      if (redoHistory.length === 0) return;
+      undoHistory.push(saveState());
+      restoreState(redoHistory.pop());
+      draw();
+    }
+
+    function getRing(ledIndex) {
+      let start = 0;
+      for (let r = 0; r < NUM_RINGS; r++) {
+        if (ledIndex < start + LED_PER_CIRCLE[r]) return r;
+        start += LED_PER_CIRCLE[r];
+      }
+      return NUM_RINGS - 1;
+    }
+
+    function nearestLedIndex(x, y) {
+      let best = 0;
+      let bestD = Infinity;
+      for (let i = 0; i < leds.length; i++) {
+        const d = Math.hypot(leds[i].x - x, leds[i].y - y);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return best;
+    }
+
+    function ledsAlongLine(fromIndex, toIndex) {
+      const a = leds[fromIndex];
+      const b = leds[toIndex];
+      const out = new Set([fromIndex, toIndex]);
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy);
+      const steps = Math.max(2, Math.ceil(len / 8));
+      for (let i = 1; i < steps; i++) {
+        const t = i / steps;
+        const x = a.x + t * dx;
+        const y = a.y + t * dy;
+        out.add(nearestLedIndex(x, y));
+      }
+      const arr = Array.from(out);
+      arr.sort((i, j) => {
+        const dI = Math.hypot(leds[i].x - a.x, leds[i].y - a.y);
+        const dJ = Math.hypot(leds[j].x - a.x, leds[j].y - a.y);
+        return dI - dJ;
+      });
+      return arr;
+    }
+
+    function hitTest(x, y) {
+      const scale = 1;
+      let best = null;
+      let bestD = 999;
+      for (const led of leds) {
+        const d = Math.hypot(led.x - x, led.y - y);
+        if (d < 14 && d < bestD) { bestD = d; best = led.index; }
+      }
+      return best;
+    }
+
+    function angularDistDeg10(a, b) {
+      let d = Math.abs((a - b) % 3600);
+      if (d > 1800) d = 3600 - d;
+      return d;
+    }
+    function getAdjacentIndices(index) {
+      const ring = getRing(index);
+      let start = 0;
+      for (let i = 0; i < ring; i++) start += LED_PER_CIRCLE[i];
+      const n = LED_PER_CIRCLE[ring];
+      const pos = index - start;
+      const out = [];
+      const myTheta = leds[index].theta;
+      if (n > 1) {
+        out.push(start + ((pos - 1 + n) % n));
+        out.push(start + ((pos + 1) % n));
+      }
+      if (ring > 0) {
+        const innerStart = start - LED_PER_CIRCLE[ring - 1];
+        const innerN = LED_PER_CIRCLE[ring - 1];
+        if (n === 1) {
+          out.push(innerStart);
+        } else {
+          let best = innerStart;
+          let bestD = Infinity;
+          for (let k = 0; k < innerN; k++) {
+            const d = angularDistDeg10(myTheta, leds[innerStart + k].theta);
+            if (d < bestD) { bestD = d; best = innerStart + k; }
+          }
+          out.push(best);
+        }
+      }
+      if (ring < NUM_RINGS - 1) {
+        const outerStart = start + n;
+        const outerN = LED_PER_CIRCLE[ring + 1];
+        if (n === 1) {
+          for (let k = 0; k < outerN; k++) out.push(outerStart + k);
+        } else {
+          let best = outerStart;
+          let bestD = Infinity;
+          for (let k = 0; k < outerN; k++) {
+            const d = angularDistDeg10(myTheta, leds[outerStart + k].theta);
+            if (d < bestD) { bestD = d; best = outerStart + k; }
+          }
+          out.push(best);
+        }
+      }
+      return out.filter(i => i >= 0 && i < TOTAL_LEDS);
+    }
+
+    function floodSelect(startIndex) {
+      const colorKey = (i) => {
+        const c = ledColors[i];
+        const r = c?.r ?? 0, g = c?.g ?? 0, b = c?.b ?? 0;
+        return `${r},${g},${b}`;
+      };
+      const target = colorKey(startIndex);
+      const set = new Set();
+      const stack = [startIndex];
+      while (stack.length) {
+        const i = stack.pop();
+        if (set.has(i)) continue;
+        if (colorKey(i) !== target) continue;
+        set.add(i);
+        getAdjacentIndices(i).forEach(j => stack.push(j));
+      }
+      return set;
+    }
+
+    function draw() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#0f0f1a';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#2a2a4a';
+      ctx.lineWidth = 1;
+      for (let ring = 0; ring < NUM_RINGS; ring++) {
+        const radiusPx = (NUM_RINGS - 1 - ring) * RING_STEP;
+        ctx.beginPath();
+        ctx.arc(CENTER, CENTER, radiusPx, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < leds.length; i++) {
+        const led = leds[i];
+        const c = ledColors[i];
+        if (c && (c.r || c.g || c.b)) {
+          ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
+        } else {
+          ctx.fillStyle = '#2a2a4a';
+        }
+        ctx.beginPath();
+        ctx.arc(led.x, led.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        if (selectedLeds.has(i)) {
+          ctx.strokeStyle = getSelectedColorHex();
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      if (rectStart && rectCurrent) {
+        ctx.strokeStyle = '#888';
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(
+          Math.min(rectStart.x, rectCurrent.x), Math.min(rectStart.y, rectCurrent.y),
+          Math.abs(rectCurrent.x - rectStart.x), Math.abs(rectCurrent.y - rectStart.y)
+        );
+        ctx.setLineDash([]);
+      }
+
+      const drawType = document.querySelector('input[name="pointType"]:checked').value;
+      if (!isSimulating && drawType === '0' && drawPath.length > 0) {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const drawArrow = (fromIdx, toIdx) => {
+          if (fromIdx === toIdx) return;
+          const from = leds[fromIdx];
+          const to = leds[toIdx];
+          const angle = Math.atan2(to.y - from.y, to.x - from.x);
+          const headLen = 12;
+          const headX1 = to.x - headLen * Math.cos(angle - 0.4);
+          const headY1 = to.y - headLen * Math.sin(angle - 0.4);
+          const headX2 = to.x - headLen * Math.cos(angle + 0.4);
+          const headY2 = to.y - headLen * Math.sin(angle + 0.4);
+          ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.moveTo(to.x, to.y);
+          ctx.lineTo(headX1, headY1);
+          ctx.moveTo(to.x, to.y);
+          ctx.lineTo(headX2, headY2);
+          ctx.stroke();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.moveTo(to.x, to.y);
+          ctx.lineTo(headX1, headY1);
+          ctx.moveTo(to.x, to.y);
+          ctx.lineTo(headX2, headY2);
+          ctx.stroke();
+        };
+        drawArrow(CENTER_LED_INDEX, drawPath[0]);
+        for (let i = 0; i < drawPath.length - 1; i++) drawArrow(drawPath[i], drawPath[i + 1]);
+      }
+    }
+
+    function hsvToRgb(h, s, v) {
+      h = ((h % 360) + 360) % 360 / 60;
+      const c = v * s;
+      const x = c * (1 - Math.abs((h % 2) - 1));
+      const m = v - c;
+      let r, g, b;
+      if (h < 1) { r = c; g = x; b = 0; }
+      else if (h < 2) { r = x; g = c; b = 0; }
+      else if (h < 3) { r = 0; g = c; b = x; }
+      else if (h < 4) { r = 0; g = x; b = c; }
+      else if (h < 5) { r = x; g = 0; b = c; }
+      else { r = c; g = 0; b = x; }
+      return {
+        r: Math.round((r + m) * 255),
+        g: Math.round((g + m) * 255),
+        b: Math.round((b + m) * 255)
+      };
+    }
+    const RAINBOW_STEPS = [
+      { r: 255, g: 0, b: 0 },     // Red
+      { r: 255, g: 128, b: 0 },   // Orange
+      { r: 255, g: 255, b: 0 },   // Yellow
+      { r: 102, g: 255, b: 102 }, // Light Green
+      { r: 0, g: 153, b: 0 },     // Dark Green
+      { r: 102, g: 204, b: 255 }, // Light Blue
+      { r: 0, g: 51, b: 204 },    // Dark Blue
+      { r: 75, g: 0, b: 130 },    // Indigo
+      { r: 143, g: 0, b: 255 },   // Violet
+      { r: 255, g: 20, b: 147 }   // Pink
+    ];
+    function getRainbowRGBAndAdvance() {
+      const rgb = RAINBOW_STEPS[rainbowHueCounter % RAINBOW_STEPS.length];
+      rainbowHueCounter++;
+      return { ...rgb };
+    }
+    function getRainbowRGBNoAdvance() {
+      return { ...RAINBOW_STEPS[rainbowHueCounter % RAINBOW_STEPS.length] };
+    }
+    function getSelectedColorHex() {
+      const c = rainbowMode ? getRainbowRGBNoAdvance() : {
+        r: parseInt(document.getElementById('inpR').value, 10) || 0,
+        g: parseInt(document.getElementById('inpG').value, 10) || 0,
+        b: parseInt(document.getElementById('inpB').value, 10) || 0
+      };
+      return `rgb(${c.r},${c.g},${c.b})`;
+    }
+
+    function getSelectedRGB() {
+      return {
+        r: Math.max(0, Math.min(255, parseInt(document.getElementById('inpR').value, 10) || 0)),
+        g: Math.max(0, Math.min(255, parseInt(document.getElementById('inpG').value, 10) || 0)),
+        b: Math.max(0, Math.min(255, parseInt(document.getElementById('inpB').value, 10) || 0))
+      };
+    }
+    function getEffectiveRGB() {
+      if (rainbowMode) {
+        const rgb = getRainbowRGBAndAdvance();
+        document.getElementById('inpR').value = rgb.r;
+        document.getElementById('inpG').value = rgb.g;
+        document.getElementById('inpB').value = rgb.b;
+        document.getElementById('colorPicker').value = '#' + [rgb.r, rgb.g, rgb.b].map(x => ('0' + Math.max(0, Math.min(255, x)).toString(16)).slice(-2)).join('');
+        return rgb;
+      }
+      return getSelectedRGB();
+    }
+
+    function appendPoint(type, r, theta, rgb) {
+      const thetaOut = thetaToOutput(theta);
+      const pointStr = `{{${r}, ${thetaOut}}, ${type}, {${rgb.r}, ${rgb.g}, ${rgb.b}}}`;
+      const ta = document.getElementById('output');
+      const current = ta.value.trim();
+      ta.value = current ? current + ', ' + pointStr : pointStr;
+    }
+
+    function syncColorFromPicker() {
+      const hex = document.getElementById('colorPicker').value;
+      const n = parseInt(hex.slice(1), 16);
+      document.getElementById('inpR').value = (n >> 16) & 255;
+      document.getElementById('inpG').value = (n >> 8) & 255;
+      document.getElementById('inpB').value = n & 255;
+    }
+    function syncPickerFromRGB() {
+      const r = document.getElementById('inpR').value || 0;
+      const g = document.getElementById('inpG').value || 0;
+      const b = document.getElementById('inpB').value || 0;
+      const hex = '#' + [r, g, b].map(x => ('0' + Math.max(0, Math.min(255, parseInt(x, 10))).toString(16)).slice(-2)).join('');
+      document.getElementById('colorPicker').value = hex;
+    }
+    document.getElementById('colorPicker').addEventListener('input', () => { turnOffRainbowMode(); syncColorFromPicker(); });
+    ['inpR', 'inpG', 'inpB'].forEach(id => document.getElementById(id).addEventListener('input', () => { turnOffRainbowMode(); syncPickerFromRGB(); }));
+
+    document.querySelectorAll('input[name="pointType"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.getElementById('fillOnly').style.display = radio.value === '1' ? 'block' : 'none';
+        document.getElementById('drawOnly').style.display = radio.value === '0' ? 'block' : 'none';
+        if (radio.value !== '1') selectedLeds.clear();
+        // Don't clear draw path when switching modes — arrows stay, and Draw continues from last point
+        updateFillModeText();
+        draw();
+      });
+    });
+    document.querySelectorAll('input[name="fillSelectMethod"], input[name="fillSelectAction"]').forEach(el => {
+      el.addEventListener('change', updateFillModeText);
+    });
+    function getFillSelectMethod() {
+      return document.querySelector('input[name="fillSelectMethod"]:checked')?.value || 'select';
+    }
+    function getFillSelectAction() {
+      return document.querySelector('input[name="fillSelectAction"]:checked')?.value || 'select';
+    }
+    function updateFillModeText() {
+      const sel = document.getElementById('selectionMode');
+      if (!sel) return;
+      const method = getFillSelectMethod();
+      const action = getFillSelectAction();
+      const isDeselect = action === 'deselect';
+      if (method === 'flood') sel.textContent = isDeselect ? 'Click an LED to deselect same-color region' : 'Click an LED to flood-fill same color';
+      else if (method === 'rect') sel.textContent = isDeselect ? 'Drag a box; LEDs inside get deselected' : 'Drag to draw a box; LEDs inside get selected';
+      else sel.textContent = isDeselect ? 'Click or drag to deselect LEDs' : 'Click or drag to select; use Fill to apply';
+    }
+
+    document.getElementById('btnFill').addEventListener('click', () => {
+      if (selectedLeds.size === 0) return;
+      pushUndo();
+      const sorted = Array.from(selectedLeds)
+        .map(i => ({ i, r: leds[i].r, theta: leds[i].theta }))
+        .sort((a, b) => b.r - a.r || a.theta - b.theta);
+      if (rainbowMode) {
+        const baseHue = (rainbowHueCounter * 25) % 360;
+        rainbowHueCounter++;
+        const byRing = new Map();
+        for (const { i, r, theta } of sorted) {
+          const ring = getRing(i);
+          if (!byRing.has(ring)) byRing.set(ring, []);
+          byRing.get(ring).push({ i, r, theta });
+        }
+        for (let ring = 0; ring < NUM_RINGS; ring++) {
+          if (!byRing.has(ring)) continue;
+          const ringLEDs = byRing.get(ring);
+          const n = ringLEDs.length;
+          ringLEDs.forEach(({ i, r, theta }, j) => {
+            const hue = (baseHue + (n > 1 ? (j / (n - 1)) * 360 : 0)) % 360;
+            const rgb = hsvToRgb(hue, 1, 1);
+            ledColors[i] = { ...rgb };
+            appendPoint(1, r, theta, rgb);
+          });
+        }
+      } else {
+        const rgb = getEffectiveRGB();
+        for (const { i, r, theta } of sorted) {
+          ledColors[i] = { ...rgb };
+          appendPoint(1, r, theta, rgb);
+        }
+      }
+      selectedLeds.clear();
+      draw();
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const idx = hitTest(x, y);
+      const type = document.querySelector('input[name="pointType"]:checked').value;
+
+      if (type === '1' && getFillSelectMethod() === 'rect') {
+        rectStart = { x, y };
+        rectCurrent = { x, y };
+        draw();
+        return;
+      }
+      if (idx === null) return;
+
+      if (type === '0') {
+        if (lastDrawLedIndex !== null && idx === lastDrawLedIndex) {
+          if (suppressDuplicateWarning) {
+            doDrawSegment(idx);
+            draw();
+            return;
+          }
+          pendingDuplicateDrawIdx = idx;
+          document.getElementById('dupClickOverlay').classList.add('show');
+          return;
+        }
+        const pointPerLed = document.getElementById('chkPointPerLed').checked;
+        if (pointPerLed) isDragging = true;
+        doDrawSegment(idx);
+      } else if (type === '1') {
+        isDragging = true;
+        const method = getFillSelectMethod();
+        const action = getFillSelectAction();
+        if (method === 'flood') {
+          const set = floodSelect(idx);
+          if (action === 'select') set.forEach(i => selectedLeds.add(i));
+          else set.forEach(i => selectedLeds.delete(i));
+        } else {
+          if (action === 'select') selectedLeds.add(idx);
+          else selectedLeds.delete(idx);
+        }
+      } else if (type === '2') {
+        pushUndo();
+        const rgb = getEffectiveRGB();
+        ledColors[idx] = { ...rgb };
+        const { r, theta } = leds[idx];
+        appendPoint(2, r, theta, rgb);
+        lastDetailLedIndex = idx;
+        isDragging = true;
+      }
+      draw();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      if (rectStart) {
+        rectCurrent = { x, y };
+        draw();
+        return;
+      }
+      const idx = hitTest(x, y);
+      const type = document.querySelector('input[name="pointType"]:checked').value;
+      if (type === '1' && isDragging && idx !== null) {
+        const method = getFillSelectMethod();
+        const action = getFillSelectAction();
+        if (method === 'flood') {
+          const set = floodSelect(idx);
+          if (action === 'select') set.forEach(i => selectedLeds.add(i));
+          else set.forEach(i => selectedLeds.delete(i));
+        } else {
+          if (action === 'select') selectedLeds.add(idx);
+          else selectedLeds.delete(idx);
+        }
+        draw();
+      } else if (type === '2' && isDragging && idx !== null && idx !== lastDetailLedIndex) {
+        const rgb = getEffectiveRGB();
+        ledColors[idx] = { ...rgb };
+        const { r, theta } = leds[idx];
+        appendPoint(2, r, theta, rgb);
+        lastDetailLedIndex = idx;
+        draw();
+      } else if (type === '0' && isDragging && document.getElementById('chkPointPerLed').checked && idx !== null && idx !== lastDrawLedIndex) {
+        const fromIdx = lastDrawLedIndex;
+        const dragIdx = idx;
+        const along = ledsAlongLine(fromIdx, dragIdx);
+        const includeCenterStart = (fromIdx === CENTER_LED_INDEX && drawPath.length === 0);
+        let toColor = includeCenterStart ? along : along.filter(ledIdx => ledIdx !== fromIdx);
+        if (!toColor.includes(dragIdx)) toColor = [...toColor, dragIdx];
+        const pointPerLed = true;
+        const rVal = leds[dragIdx].r;
+        const thetaVal = leds[dragIdx].theta;
+        let rgb;
+        if (rainbowMode && along.length > 0) {
+          toColor.forEach((ledIdx) => {
+            rgb = getRainbowRGBAndAdvance();
+            ledColors[ledIdx] = { ...rgb };
+            appendPoint(0, leds[ledIdx].r, leds[ledIdx].theta, rgb);
+          });
+        } else {
+          rgb = getEffectiveRGB();
+          toColor.forEach(i => {
+            ledColors[i] = { ...rgb };
+            appendPoint(0, leds[i].r, leds[i].theta, rgb);
+          });
+        }
+        prevDrawLedIndex = lastDrawLedIndex;
+        lastDrawLedIndex = dragIdx;
+        toColor.forEach(ledIdx => drawPath.push(ledIdx));
+        draw();
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (rectStart) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        rectCurrent = { x, y };
+        const x0 = Math.min(rectStart.x, rectCurrent.x);
+        const y0 = Math.min(rectStart.y, rectCurrent.y);
+        const x1 = Math.max(rectStart.x, rectCurrent.x);
+        const y1 = Math.max(rectStart.y, rectCurrent.y);
+        const action = getFillSelectAction();
+        leds.forEach((led, i) => {
+          if (led.x >= x0 && led.x <= x1 && led.y >= y0 && led.y <= y1) {
+            if (action === 'select') selectedLeds.add(i);
+            else selectedLeds.delete(i);
+          }
+        });
+        rectStart = null;
+        rectCurrent = null;
+        draw();
+      }
+      isDragging = false;
+      lastDetailLedIndex = null;
+    });
+    canvas.addEventListener('mouseleave', () => { isDragging = false; lastDetailLedIndex = null; if (rectStart) { rectStart = null; rectCurrent = null; draw(); } });
+
+    (function initDupClickModal() {
+      const overlay = document.getElementById('dupClickOverlay');
+      const btnContinue = document.getElementById('dupClickContinue');
+      const btnUndo = document.getElementById('dupClickUndo');
+      const chkDismiss = document.getElementById('dupClickDismiss');
+      function hideModal() {
+        overlay.classList.remove('show');
+        pendingDuplicateDrawIdx = null;
+      }
+      btnContinue.addEventListener('click', () => {
+        if (pendingDuplicateDrawIdx !== null) {
+          doDrawSegment(pendingDuplicateDrawIdx);
+          draw();
+          if (chkDismiss.checked) suppressDuplicateWarning = true;
+        }
+        hideModal();
+      });
+      btnUndo.addEventListener('click', () => {
+        hideModal();
+      });
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) hideModal(); });
+    })();
+
+    document.getElementById('btnCopy').addEventListener('click', () => {
+      document.getElementById('output').select();
+      document.execCommand('copy');
+    });
+    document.getElementById('btnUndo').addEventListener('click', undo);
+    document.getElementById('btnClear').addEventListener('click', clearPattern);
+    document.addEventListener('keydown', (e) => {
+      const key = (e.key || '').toLowerCase();
+      if (e.ctrlKey && e.shiftKey && key === 'z') {
+        e.preventDefault();
+        redo();
+      } else if (e.ctrlKey && !e.shiftKey && key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+      const code = e.keyCode || e.which;
+      if (code === KONAMI[konamiIndex]) {
+        konamiIndex++;
+        if (konamiIndex === KONAMI.length) {
+          rainbowMode = !rainbowMode;
+          konamiIndex = 0;
+          const toastEl = document.getElementById('rainbowToast');
+          const flashEl = document.getElementById('rainbowFlash');
+          const colorWrap = document.getElementById('colorSelectorWrap');
+          if (rainbowMode) {
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 2500);
+            flashEl.style.display = 'block';
+            flashEl.style.opacity = '1';
+            let t = 0;
+            function flashTick() {
+              t += 0.02;
+              const hue = (t * 360 * 2) % 360;
+              flashEl.style.background = `hsl(${hue}, 100%, 50%)`;
+              flashEl.style.opacity = Math.max(0, 1 - t);
+              if (t < 1) requestAnimationFrame(flashTick);
+              else flashEl.style.display = 'none';
+            }
+            requestAnimationFrame(flashTick);
+            colorWrap.classList.add('rainbow-bg');
+          } else {
+            turnOffRainbowMode();
+          }
+        }
+      } else {
+        konamiIndex = 0;
+      }
+    });
+
+    document.getElementById('btnSimulate').addEventListener('click', async () => {
+      const btnSimulate = document.getElementById('btnSimulate');
+      if (isSimulating) {
+        stopSimulationRequested = true;
+        return;
+      }
+      const text = document.getElementById('output').value;
+      const regex = /\{\s*\{\s*(\d+)\s*,\s*(\d+)\s*\}\s*,\s*(\d+)\s*,\s*\{\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}\s*\}/g;
+      const points = [];
+      let m;
+      while ((m = regex.exec(text)) !== null) {
+        points.push({
+          r: parseInt(m[1], 10),
+          theta: thetaFromOutput(parseInt(m[2], 10)),
+          type: parseInt(m[3], 10),
+          rgb: { r: parseInt(m[4], 10), g: parseInt(m[5], 10), b: parseInt(m[6], 10) }
+        });
+      }
+      isSimulating = true;
+      stopSimulationRequested = false;
+      btnSimulate.textContent = 'Stop';
+      try {
+      for (let i = 0; i < ledColors.length; i++) ledColors[i] = { r: 0, g: 0, b: 0 };
+      draw();
+      const wrapRect = document.getElementById('canvasWrap').getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const scaleX = canvasRect.width / 520;
+      const scaleY = canvasRect.height / 520;
+      const offsetX = canvasRect.left - wrapRect.left;
+      const offsetY = canvasRect.top - wrapRect.top;
+      const setMarble = (x, y) => {
+        marbleEl.style.left = (offsetX + x * scaleX - 7) + 'px';
+        marbleEl.style.top = (offsetY + y * scaleY - 7) + 'px';
+        marbleEl.style.display = 'block';
+      };
+      setMarble(leds[CENTER_LED_INDEX].x, leds[CENTER_LED_INDEX].y);
+      await new Promise(r => setTimeout(r, MARBLE_MS_PER_LED));
+      let lastIdx = CENTER_LED_INDEX;
+      const simulatedDrawPath = [];
+      outer:
+      for (const pt of points) {
+        if (stopSimulationRequested) break;
+        const idx = getLedNumber(pt.r, pt.theta);
+        if (pt.type === 0) {
+          const along = ledsAlongLine(lastIdx, idx);
+          for (const i of along) {
+            if (stopSimulationRequested) break outer;
+            ledColors[i] = { ...pt.rgb };
+            draw();
+            setMarble(leds[i].x, leds[i].y);
+            await new Promise(r => setTimeout(r, MARBLE_MS_PER_LED));
+            if (stopSimulationRequested) break outer;
+          }
+          lastIdx = idx;
+          simulatedDrawPath.push(idx);
+        } else if (pt.type === 1) {
+          ledColors[idx] = { ...pt.rgb };
+          draw();
+          await new Promise(r => setTimeout(r, FILL_DELAY_MS));
+          if (stopSimulationRequested) break;
+        } else {
+          ledColors[idx] = { ...pt.rgb };
+          draw();
+          await new Promise(r => setTimeout(r, DETAIL_DELAY_MS));
+          if (stopSimulationRequested) break;
+        }
+      }
+      if (stopSimulationRequested) {
+        for (let i = 0; i < ledColors.length; i++) ledColors[i] = { r: 0, g: 0, b: 0 };
+        drawPath.length = 0;
+        let finalLastIdx = CENTER_LED_INDEX;
+        const finalPath = [];
+        for (const pt of points) {
+          const idx = getLedNumber(pt.r, pt.theta);
+          if (pt.type === 0) {
+            const along = ledsAlongLine(finalLastIdx, idx);
+            for (const i of along) ledColors[i] = { ...pt.rgb };
+            finalLastIdx = idx;
+            finalPath.push(idx);
+          } else {
+            ledColors[idx] = { ...pt.rgb };
+          }
+        }
+        if (finalPath.length > 0) {
+          drawPath.push(...finalPath);
+          lastDrawLedIndex = finalPath[finalPath.length - 1];
+          prevDrawLedIndex = finalPath.length >= 2 ? finalPath[finalPath.length - 2] : null;
+        }
+      }
+      marbleEl.style.display = 'none';
+      if (!stopSimulationRequested && simulatedDrawPath.length > 0) {
+        drawPath.length = 0;
+        drawPath.push(...simulatedDrawPath);
+        lastDrawLedIndex = simulatedDrawPath[simulatedDrawPath.length - 1];
+        prevDrawLedIndex = simulatedDrawPath.length >= 2 ? simulatedDrawPath[simulatedDrawPath.length - 2] : null;
+        draw();
+      }
+      } finally {
+        isSimulating = false;
+        stopSimulationRequested = false;
+        btnSimulate.textContent = 'Simulate';
+        draw();
+      }
+    });
+
+    draw();
+  })();
+  </script>
+</body>
+</html>
