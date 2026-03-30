@@ -90,6 +90,7 @@ During calibration pause:
 - Use joystick up/down to change selected pattern.
 - Press joystick button to start the current pattern.
 - With `PAUSE_AFTER_START true`, the pattern pauses after reaching its first point:
+  - This gives you time to clear any stray tracks/lines in the sand so the image starts clean.
   - Press joystick button again to continue full drawing.
 
 ## 4) During drawing
@@ -144,7 +145,6 @@ Where:
 - Clear pattern
 - Copy output
 - Simulate output path and timing
-- Hidden rainbow mode via Konami code
 
 ## How to use it
 
@@ -162,3 +162,8 @@ Where:
 ## Credit
 
 SandPainter builds on the Sand Garden image workflow concept originally published in [Image2Sand](https://github.com/orionwc/Image2Sand/).
+
+Also check out:
+
+- [InspiredByOrion](https://www.youtube.com/@InspiredByOrion) for project videos that use code from the Image2Sand repo.
+- [HackPackHackers](https://www.youtube.com/@HackPackHackers) - huge shoutout for support and testing SandPainter.

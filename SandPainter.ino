@@ -123,7 +123,6 @@ struct LEDpos {
 };
 
 //=== CUSTOM PATTERN DATA - Paste your coordinates from the SandPainter web editor below ===
-// More patterns available at https://github.com/orionwc/Image2Sand/blob/main/CommunityPatterns.txt
 
 #ifdef ENABLE_CUSTOM_PATTERN_A
 // Pattern A: CrunchLabs Logo
