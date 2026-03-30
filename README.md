@@ -8,6 +8,8 @@ It combines:
 
 Unlike the original [Image2Sand](https://github.com/orionwc/Image2Sand/), SandPainter focuses on **LED-aware, color-aware pattern authoring** (point types + RGB color per point), with startup calibration support for aligning the LED ring to the real sand motion.
 
+Try the live web editor: [SandPainter Live](https://orionwc.github.io/SandPainter/)
+
 ---
 
 ## Files In This Repo
@@ -161,9 +163,9 @@ Where:
 
 ## Credit
 
-SandPainter builds on the Sand Garden image workflow concept originally published in [Image2Sand](https://github.com/orionwc/Image2Sand/).
+SandPainter builds on the Sand Garden image workflow concept originally published in [Image2Sand](https://github.com/orionwc/Image2Sand/) and the Glowing Sand hardware hack from [BROOKSY Robotics](https://www.youtube.com/@brooksyrobotics-hub)
 
 Also check out:
 
 - [InspiredByOrion](https://www.youtube.com/@InspiredByOrion) for project videos that use code from the Image2Sand repo.
-- [HackPackHackers](https://www.youtube.com/@HackPackHackers) - huge shoutout for support and testing SandPainter.
+- [BROOKSY Robotics](https://www.youtube.com/@brooksyrobotics-hub) - huge shoutout for motivating, supporting and testing SandPainter.
